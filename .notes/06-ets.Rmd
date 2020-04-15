@@ -1,0 +1,150 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r}
+library(fable)
+library(tsibble)
+library(tsibbledata)
+```
+
+
+Exponentially weighted moving average
+
+$$
+\hat{y}_{T+1|T} = \alpha y_T + \alpha(1 - \alpha)y_{T-1} + \alpha(1 - \alpha)^2y_{T-2} + \cdots
+$$
+
+If $\ell_0$ is the first observation then this generalizes to
+
+$$
+\hat{y}_{T+1|T} = \sum_{j=0}^{T-1} \alpha(1 - \alpha)^j y_{T-j} + (1 - \alpha)^T \ell_0
+$$
+
+In component form this is
+
+$$
+\begin{align}
+\text{Forecast Equation: } & \hat{y}_{t+h|t} = \ell_t \\
+\text{Smoothing Equation: } & \ell_t = \alpha y_t + (1 - \alpha) \ell_{t-1}
+\end{align}
+$$
+
+linear trend, AAN MAN
+
+```{r}
+us_eco <- global_economy %>%
+  dplyr::filter(Code == "USA") %>%
+  dplyr::mutate(pop = Population / 1e6)
+```
+
+```{r}
+ets_aan <- us_eco %>%
+  fabletools::model(
+    aan = fable::ETS(pop) # can provide specials
+  )
+```
+
+```{r}
+ets_aan
+```
+
+```{r}
+fabletools::report(ets_aan) # not for inference
+```
+
+
+```{r}
+components(ets_aan)
+```
+
+```{r}
+components(ets_aan) %>% autoplot()
+```
+
+```{r}
+ets_aan %>%
+  forecast(h = 20) %>%
+  autoplot(us_eco)
+```
+
+## aan
+
+```{r}
+aan <- us_eco %>%
+  fabletools::model(
+    ann = fable::ETS(pop ~ error("A") + trend("A") + season("N"))
+  )
+
+aan %>%
+  forecast(h = 30) %>%
+  autoplot(us_eco)
+```
+
+## aaa
+
+```{r}
+aaa <- us_eco %>%
+  fabletools::model(
+    ann = fable::ETS(pop ~ error("A") + trend("A") + season("A"))
+  )
+
+aaa %>%
+  forecast(h = 30) %>%
+  autoplot(us_eco)
+```
+
+## Automatic model formulation
+
+Best determined by $AICc$
+
+```{r ets-auto-model,dependson=c('make-tsibble')}
+ets_auto <- us_eco %>% 
+  model(
+    ets=ETS(pop)
+  )
+
+ets_ann %>% report
+
+ets_auto %>% 
+  forecast(h=30) %>% 
+  autoplot()
+```
+
+# AICc
+
+$$
+\text{AIC} = -2 \text{log}(L) + 2(p+q+k+1)
+$$
+
+$$
+\text{AICc} = \text{AIC} + \frac{2(p+q+k+1)(p+q+k+2)}{T - p - q - k - 2}
+$$
+
+## Exercise
+
+1. Try forcasting the USA GDP
+2. Do it with with a boxcox transformation
+
+```{r}
+lambda <- us_eco %>% 
+   features(GDP, features=feasts::guerrero) %>% 
+   dplyr::pull(lambda_guerrero)
+
+lambda
+
+us_eco %>% 
+    autoplot(box_cox(GDP, lambda))
+
+ets <- us_eco %>% 
+  model(
+    ets=ETS(GDP)
+  )
+
+ets %>% report
+
+ets %>% 
+  forecast(h=30) %>% 
+  autoplot()
+

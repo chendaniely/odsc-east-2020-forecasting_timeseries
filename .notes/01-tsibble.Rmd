@@ -1,0 +1,87 @@
+---
+title: "Untitled"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+library(tsibble)
+library(tsibbledata)
+```
+
+```{r}
+# index, keys, measure
+tsibbledata::gafa_stock
+```
+
+```{r}
+tdf <- tsibble::tsibble(
+  date = 2011:2020,
+  letter = LETTERS[1:10],
+  value = 1:10,
+  key = letter,
+  index = date,
+)
+tdf
+```
+
+```{r}
+tsibbledata::vic_elec
+```
+
+```{r}
+library(dplyr)
+
+elec_filter <- tsibbledata::vic_elec %>%
+  dplyr::filter(Time >= as.Date("2012-12-01"))
+```
+
+```{r}
+elec <- tsibbledata::vic_elec %>%
+  dplyr::mutate(quarter = tsibble::yearquarter(Date)) %>%
+  tsibble::update_tsibble(
+    index = quarter,
+    key = Time
+  )
+```
+
+```{r}
+dplyr::sample_n(elec, 10)
+```
+
+```{r}
+elec %>%
+  tsibble::index_by(quarter) %>%
+  dplyr::summarise(avg_demand = mean(Demand))
+```
+
+## Exercise
+
+```{r}
+tsibbledata::olympic_running
+```
+
+```{r}
+oly <- tibble::tibble(tsibbledata::olympic_running)
+```
+
+1. recreate the olympic_running tsibble
+2. What is the average time by each year
+
+```{r}
+tsibbledata::olympic_running %>%
+  dplyr::group_by(Length, Sex) %>%
+  #tsibble::index_by(Year) %>%
+  dplyr::summarise(avg = mean(Time, na.rm = TRUE)) %>%
+  dplyr::arrange(avg)
+```
+
+```{r}
+tsibbledata::olympic_running %>%
+  #dplyr::group_by(Sex) %>%
+  tsibble::index_by(Year) %>%
+  dplyr::summarise(avg = mean(Time, na.rm = TRUE))
+```
+
+

@@ -1,0 +1,77 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r}
+library(tsibble)
+library(tsibbledata)
+library(fable)
+```
+
+
+## Log
+
+$$
+w_t = log(y_t)
+$$
+
+```{r}
+tsibbledata::vic_elec %>% autoplot(log(Demand))
+```
+
+## Box Cox
+
+$$
+w_t = 
+\begin{cases}
+    log(y_t), & \text{if } \lambda = 0; \\
+    (y_t^\lambda - 1)/\lambda, & \text{otherwise}.
+\end{cases}
+$$
+
+```{r}
+library(ggplot2)
+library(gganimate)
+library(transformr)
+library(tibble)
+elec <- readr::read_csv(here::here('./data/electricity_france.csv'))
+
+elec <- elec %>% 
+    as_tsibble(index=Date) %>% 
+    dplyr::filter(Date >= as.Date('2007-01-01'))
+
+lambdas <- c(0, seq(from=0.1, to=2, by=0.05))
+trans_elec <- lambdas %>% 
+    purrr::map_df(
+        ~ elec %>% dplyr::select(Date, ActivePower) %>% 
+            dplyr::mutate(
+                ActivePower=box_cox(ActivePower, .x), 
+                Lambda=.x) %>% 
+            as_tibble()
+    ) %>% 
+    dplyr::mutate(Power=as.character(Lambda))
+
+ggplot(trans_elec, aes(x=Date, y=ActivePower)) + 
+    geom_line() + 
+    transition_states(Lambda) + 
+    view_follow() + 
+    labs(title="Lambda: {closest_state}")
+```
+
+A good value of $\lambda$ is one which makes the size of the seasonal variation about the same across the whole series, as that makes the forecasting model simpler.
+
+Use `guerrero()` to choose $\lambda$ which minimises the coefficient of variation for subseries of x.
+
+```{r}
+lambda <- elec %>% 
+   features(ActivePower, features=feasts::guerrero) %>% 
+   dplyr::pull(lambda_guerrero)
+
+lambda
+```
+
+```{r}
+elec %>% 
+    autoplot(box_cox(ActivePower, lambda))
+```

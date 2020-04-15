@@ -1,0 +1,138 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+
+# Autoregressive Models
+
+
+$$
+y_t = c+ \phi_1y_{t-1} + \phi_2y_{t-2} + \cdots + \phi_py_{t-p} + \epsilon_t
+$$
+
+# Moving Average Models
+
+$$
+y_t = c + \epsilon_t + \theta_1\epsilon_{t-1} + \theta_2\epsilon_{t-2} + \cdots + \theta_q\epsilon_{t-q}
+$$
+
+# ARIMA Models
+
+Autoregressive Integrated Moving Average
+
+$$
+y_t' = c + \phi_1y_{t-1}' + \cdots + \phi_py_{t-p}' + \theta_1\epsilon_{t-1} + \cdots + \theta_q\epsilon_{t-q} + \epsilon_t
+$$
+
+AR: p = order of the autoregressive part
+I: d = degree of rst dierencing involved
+MA: q = order of the moving average part.
+
+White noise model: ARIMA(0,0,0)
+Random walk: ARIMA(0,1,0) with no constant
+Random walk with drift: ARIMA(0,1,0) with const.
+AR(p): ARIMA(p,0,0)
+MA(q): ARIMA(0,0,q)
+
+```{r}
+library(tsibble)
+library(tsibbledata)
+library(fable)
+library(dplyr)
+
+elec <- readr::read_csv(here::here("data", "electricity_france.csv"))
+elec <- elec %>% 
+    as_tsibble(index=Date) %>% 
+    filter(Date >= as.Date('2007-01-01'))
+elec
+```
+
+Auto select a model
+
+pdq special is used to specify non-seasonal components of the model
+
+PDQ special is used to specify seasonal components of the model
+
+```{r}
+elec_arima_000 <- elec %>% 
+  model(
+    ARIMA(ActivePower ~ PDQ(0, 0, 0))
+  )
+```
+
+```{r}
+elec_arima_000
+elec_arima_000 %>% report()
+
+```
+
+```{r}
+elec_arima_000 %>% 
+  forecast(h=60) %>% 
+  autoplot() + 
+  autolayer(filter_index(elec, '2010-10' ~ .), ActivePower)
+```
+
+acf and pacf plots
+
+```{r}
+elec %>% feasts::ACF(ActivePower) %>% autoplot()
+elec %>% feasts::PACF(ActivePower) %>% autoplot()
+```
+
+arima auto harder
+
+```{r}
+elec_arima_auto <- elec %>% 
+  model(
+    ARIMA(ActivePower ~ PDQ(0, 0, 0), 
+          stepwise = FALSE, approximation = FALSE
+    )
+  )
+
+elec_arima_auto
+elec_arima_auto %>% report()
+
+elec_arima_auto %>% 
+  forecast(h=60) %>% 
+  autoplot(filter_index(elec, '2010-10' ~ .))
+```
+
+```{r}
+elec_arima_auto_2 <- elec %>% 
+  model(
+    ARIMA(ActivePower ~ pdq(1:4, 1:2, 1:4) + PDQ(0, 0, 0), 
+          stepwise = FALSE, approximation = FALSE
+    )
+  )
+
+elec_arima_auto_2
+elec_arima_auto_2 %>% report()
+
+elec_arima_auto_2 %>% 
+  forecast(h=60) %>% 
+  autoplot(filter_index(elec, '2010-10' ~ .))
+```
+
+auto arima
+
+```{r}
+elec_auto_all <- elec %>% 
+  model(
+    arima=ARIMA(ActivePower)
+  )
+
+elec_auto_all %>% report()
+# Produces a plot of the inverse AR and MA roots of an ARIMA model. Inverse roots outside the unit circle are shown in red.
+# Only models which compute ARMA roots can be visualised with this function
+elec_auto_all %>% feasts::gg_arma()
+```
+
+```{r}
+elec_auto_all %>% forecast(h=60)
+elec_auto_all %>% 
+  forecast(h=30) %>% 
+  autoplot(filter_index(elec, '2010-06' ~ .))
+```
+

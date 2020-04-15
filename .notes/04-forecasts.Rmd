@@ -1,0 +1,145 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r}
+library(tsibble)
+library(tsibbledata)
+library(fable)
+library(fabletools)
+```
+
+```{r}
+tsibbledata::vic_elec
+```
+
+
+
+## Mean model
+
+$$
+    \hat{y}_{T+h|T} = \bar{y} = (y_1 + y_2 + \dots + y_T)/T
+$$
+
+```{r}
+mean_mod <- tsibbledata::vic_elec %>%
+  fabletools::model(mean = fable::MEAN(Demand))
+```
+
+```{r}
+mean_mod
+```
+
+```{r}
+mean_mod %>% fabletools::forecast(h=90)
+```
+
+```{r}
+mean_mod %>% fabletools::forecast(h="90 days")
+```
+
+```{r}
+mean_mod %>% fabletools::forecast(h="90 days") %>%
+  fabletools::autoplot(
+    #dplyr::filter(tsibbledata::vic_elec, Time >= as.Date("2014-01-01"))
+    tsibbledata::vic_elec
+  )
+```
+
+## Naive
+
+Just the last value
+
+$$
+    \hat{y}_{T+h|T} = y_T
+$$
+
+```{r}
+naive_mod <- tsibbledata::vic_elec %>% 
+    model(Naive=NAIVE(Demand))
+
+naive_mod
+
+naive_mod %>% forecast(h=90)
+naive_mod %>% forecast(h="90 days")
+
+naive_mod %>% forecast(h="90 days") %>% autoplot(tsibbledata::vic_elec)
+```
+
+## Seasonal Naive
+
+The forecast is the last observed value from the same seasons of the year.
+
+$$
+\hat{y}_{T+h|t} = y_{T+h-m(k+1)}
+$$
+
+where $m$ is the seasonal period and $k$ is the number of complete years in the forecast period.
+
+```{r seasonal-naive-mod,dependson=c('make-tsibble')}
+snaive_mod <- tsibbledata::vic_elec %>% 
+    model(SNaive=SNAIVE(Demand ~ lag("year")))
+
+snaive_mod
+
+snaive_mod %>% forecast(h=90)
+snaive_mod %>% forecast(h="90 days")
+
+snaive_mod %>% forecast(h="90 days") %>% autoplot(tsibbledata::vic_elec)
+```
+
+Reflects seasonal changes.
+
+## Drift Method
+
+Last value plus average change over all the data
+
+Random Walk with Drift
+
+$$
+    \hat{y}_{T+h|T} = y_T + \frac{h}{T-1}\sum_{t=2}^T (y_t - y_1) = y_T + h \left( \frac{y_T - y_1}{T - 1} \right)
+$$
+
+```{r drift-mod,dependson=c('make-tsibble')}
+drift_mod <- tsibbledata::vic_elec %>% 
+    model(Drift=RW(Demand ~ drift()))
+
+drift_mod
+
+drift_mod %>% forecast(h=90)
+drift_mod %>% forecast(h="90 days")
+
+drift_mod %>% forecast(h="90 days") %>% autoplot(tsibbledata::vic_elec)
+```
+
+## Compare the Methods
+
+See all of them on one plot
+
+```{r}
+simple_mods <- tsibbledata::vic_elec %>% 
+    model(
+        Mean=MEAN(Demand)
+        , Naive=NAIVE(Demand)
+        , SNaive=SNAIVE(Demand ~ lag("1 year"))
+        , Drift=RW(Demand ~ drift())
+    )
+
+simple_mods
+
+simple_mods %>% forecast(h="90 days")
+simple_mods %>% 
+    forecast(h="90 days") %>% 
+    autoplot(filter_index(tsibbledata::vic_elec, '2010-09' ~ .), level=NULL)
+```
+
+## prediction intervals
+
+```{r}
+simple_mods %>%
+  fabletools::forecast(h="90 days") %>%
+  fabletools::hilo(level = c(50, 75)) %>%
+  tidyr::unnest()
+```
+

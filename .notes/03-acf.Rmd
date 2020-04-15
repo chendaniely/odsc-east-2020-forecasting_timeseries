@@ -1,0 +1,55 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r}
+library(tsibble)
+library(tsibbledata)
+library(feasts)
+```
+
+$$
+r_k = \frac{\sum\limits_{t=k+1}^T (y_t - \bar{y})(y_{t-k} - \bar{y})}{\sum\limits_{t=1}^T (y_t - \bar{y})^2}
+$$
+
+
+```{r}
+last10<- aus_production %>%
+  dplyr::filter(lubridate::year(Quarter) >= 2000)
+
+last10%>%
+  gg_lag(Beer, geom = "point")
+```
+
+```{r}
+last10 %>%
+  feasts::ACF(Beer, lag_max = 12) %>%
+  feasts::autoplot()
+```
+
+```{r}
+amzn2018 <- gafa_stock %>%
+  filter(Symbol == "AMZN", lubridate::year(Date) == 2018)
+``` 
+
+```{r}
+amzn2018 %>% feasts::autoplot(Close)
+```
+
+```{r}
+amzn2018 %>% feasts::ACF(Close, lag_max = 40)
+```
+
+```{r}
+amzn2018 <- amzn2018 %>%
+  dplyr::mutate(trading_day = dplyr::row_number()) %>%
+  tsibble::update_tsibble(index = trading_day, regular = TRUE)
+```
+
+```{r}
+amzn2018 %>% feasts::ACF(Close, lag_max = 180) %>%
+  feasts::autoplot()
+```
+
+## White noise
