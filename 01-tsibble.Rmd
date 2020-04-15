@@ -1,17 +1,15 @@
 ---
 title: "Untitled"
 output: html_document
-editor_options: 
-  chunk_output_type: console
 ---
 
 ```{r}
 library(tsibble)
 library(tsibbledata)
+library(dplyr)
 ```
 
 ```{r}
-# index, keys, measure
 tsibbledata::gafa_stock
 ```
 
@@ -31,10 +29,8 @@ tsibbledata::vic_elec
 ```
 
 ```{r}
-library(dplyr)
-
-elec_filter <- tsibbledata::vic_elec %>%
-  dplyr::filter(Time >= as.Date("2012-12-01"))
+elect_filter <- tsibbledata::vic_elec %>%
+  dplyr::filter(Time >= as.Date("2012-12-02"))
 ```
 
 ```{r}
@@ -47,16 +43,12 @@ elec <- tsibbledata::vic_elec %>%
 ```
 
 ```{r}
-dplyr::sample_n(elec, 10)
-```
-
-```{r}
 elec %>%
   tsibble::index_by(quarter) %>%
   dplyr::summarise(avg_demand = mean(Demand))
 ```
 
-## Exercise
+1. recreate the olympic_running tsibble
 
 ```{r}
 tsibbledata::olympic_running
@@ -66,27 +58,16 @@ tsibbledata::olympic_running
 oly <- tibble::tibble(tsibbledata::olympic_running)
 ```
 
-1. recreate the olympic_running tsibble
-
 ```{r}
 oly2 <- tsibble::as_tsibble(oly, key = c(Length, Sex), index = Year)
 ```
 
+
 2. What is the average time by each year
-
 ```{r}
-tsibbledata::olympic_running %>%
-  dplyr::group_by(Length, Sex) %>%
-  #tsibble::index_by(Year) %>%
-  dplyr::summarise(avg = mean(Time, na.rm = TRUE)) %>%
-  dplyr::arrange(avg)
-```
-
-```{r}
-tsibbledata::olympic_running %>%
-  #dplyr::group_by(Sex) %>%
+oly2 %>%
+  dplyr::group_by(Length) %>%
   tsibble::index_by(Year) %>%
-  dplyr::summarise(avg = mean(Time, na.rm = TRUE))
+  dplyr::summarize(avg = mean(Time, na.rm = TRUE))
 ```
-
 

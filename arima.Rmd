@@ -1,0 +1,78 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+# Autoregressive Models
+
+
+$$
+y_t = c+ \phi_1y_{t-1} + \phi_2y_{t-2} + \cdots + \phi_py_{t-p} + \epsilon_t
+$$
+
+# Moving Average Models
+
+$$
+y_t = c + \epsilon_t + \theta_1\epsilon_{t-1} + \theta_2\epsilon_{t-2} + \cdots + \theta_q\epsilon_{t-q}
+$$
+
+# ARIMA Models
+
+Autoregressive Integrated Moving Average
+
+$$
+y_t' = c + \phi_1y_{t-1}' + \cdots + \phi_py_{t-p}' + \theta_1\epsilon_{t-1} + \cdots + \theta_q\epsilon_{t-q} + \epsilon_t
+$$
+
+
+```{r}
+elec_arima_000 <- elec %>%
+  model(
+    ARIMA(ActivePower ~ PDQ(0, 0, 0))
+  )
+```
+
+```{r}
+elec_arima_000 %>% report()
+```
+
+```{r}
+elec_arima_auto <- elec %>% 
+  model(
+    ARIMA(ActivePower ~ PDQ(0, 0, 0), 
+          stepwise = FALSE, approximation = FALSE
+    )
+  )
+
+elec_arima_auto
+elec_arima_auto %>% report()
+
+elec_arima_auto %>% 
+  forecast(h=60) %>% 
+  autoplot(filter_index(elec, '2010-10' ~ .))
+```
+
+```{r}
+elec_arima_auto_2 <- elec %>% 
+  model(
+    ARIMA(ActivePower ~ pdq(1:4, 1:2, 1:4) + PDQ(0, 0, 0), 
+          stepwise = FALSE, approximation = FALSE
+    )
+  )
+
+elec_arima_auto_2
+elec_arima_auto_2 %>% report()
+
+elec_arima_auto_2 %>% 
+  forecast(h=60) %>% 
+  autoplot(filter_index(elec, '2010-10' ~ .))
+```
+
+# cross validation: stretch_tsibble
+
+
+
+
+
+
+

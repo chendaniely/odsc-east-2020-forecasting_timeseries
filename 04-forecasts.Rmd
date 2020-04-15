@@ -1,0 +1,78 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r}
+library(tsibble)
+library(tsibbledata)
+library(fable)
+library(fabletools)
+```
+
+```{r}
+tsibbledata::vic_elec
+```
+
+```{r}
+mean_mod <- tsibbledata::vic_elec %>%
+  fabletools::model(mean = fable::MEAN(Demand))
+```
+
+```{r}
+mean_mod
+```
+
+```{r}
+mean_mod %>% fabletools::forecast(h = 90)
+```
+
+```{r}
+mean_mod %>% fabletools::forecast(h = "90 days")
+```
+
+```{r}
+mean_mod %>%
+  fabletools::forecast(h = "90 days") %>%
+  fabletools::autoplot(tsibbledata::vic_elec)
+```
+
+```{r}
+naive_mod <- tsibbledata::vic_elec %>%
+  fabletools::model(mean = fable::NAIVE(Demand))
+```
+
+```{r}
+snaive_mod <- tsibbledata::vic_elec %>% 
+    model(SNaive=SNAIVE(Demand ~ lag("year")))
+```
+
+Drift model
+
+$$
+    \hat{y}_{T+h|T} = y_T + \frac{h}{T-1}\sum_{t=2}^T (y_t - y_1) = y_T + h \left( \frac{y_T - y_1}{T - 1} \right)
+$$
+
+```{r}
+drift_mod <- tsibbledata::vic_elec %>% 
+    model(Drift=RW(Demand ~ drift()))
+```
+
+```{r}
+simple_mods <- tsibbledata::vic_elec %>% 
+    model(
+        Mean=MEAN(Demand)
+        , Naive=NAIVE(Demand)
+        , SNaive=SNAIVE(Demand ~ lag("1 year"))
+        , Drift=RW(Demand ~ drift())
+    )
+
+simple_mods
+
+simple_mods %>% forecast(h="90 days")
+simple_mods %>%
+    forecast(h="90 days") %>% 
+    autoplot(filter_index(tsibbledata::vic_elec, '2015-01' ~ .), level=NULL)
+```
+
+

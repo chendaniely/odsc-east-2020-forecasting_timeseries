@@ -1,0 +1,91 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+```{r}
+library(tsibble)
+library(tsibbledata)
+library(dplyr)
+library(lubridate)
+library(feasts)
+library(fabletools)
+```
+
+
+```{r}
+tsibbledata::vic_elec
+```
+
+```{r}
+avg_temp <- vic_elec %>%
+  tsibble::index_by(day = lubridate::date(Time)) %>%
+  dplyr::summarise(avg_t = mean(Temperature, na.rm = TRUE))
+```
+
+```{r}
+avg_temp %>% feasts::autoplot(avg_t)
+```
+
+```{r}
+avg_temp %>% feasts::gg_season(avg_t)
+```
+
+```{r}
+vic_elec %>% feasts::gg_season(Demand, period = "week")
+```
+
+```{r}
+vic_elec %>% feasts::gg_season(Demand, period = "day")
+```
+
+```{r}
+beer <- aus_production %>%
+  dplyr::select(Quarter, Beer) %>%
+  dplyr::filter(lubridate::year(Quarter) >= 1992)
+```
+
+```{r}
+beer %>% feasts::gg_season(Beer)
+```
+
+```{r}
+beer %>% feasts::gg_subseries(Beer)
+```
+
+```{r}
+library(sugrrants)
+```
+
+```{r}
+calendar_df <- sugrrants::hourly_peds %>%
+  filter(Sensor_ID == 13, Year == 2016) %>%
+  frame_calendar(x = Time, y = Hourly_Counts, date = Date, nrow = 4)
+
+p1 <- calendar_df %>%
+  ggplot(aes(x = .Time, y = .Hourly_Counts, group = Date)) +
+  geom_line()
+prettify(p1, size = 3, label.padding = unit(0.15, "lines"))
+```
+
+
+1. Look at the `Quarter` and `Electricity` values from the `aus_production ` dataset
+
+
+```{r}
+elec <- tsibbledata::aus_production %>%
+  dplyr::select(Quarter, Electricity)
+```
+
+```{r}
+elec %>% fabletools::autoplot(Electricity)
+```
+
+```{r}
+elec %>% gg_season(Electricity)
+```
+
+```{r}
+elec %>% gg_subseries(Electricity)
+```
+

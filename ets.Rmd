@@ -1,0 +1,71 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+ETS
+
+```{r}
+library(fable)
+library(tsibble)
+library(tsibbledata)
+```
+
+```{r}
+us_eco <- global_economy %>%
+  dplyr::filter(Code == "USA") %>%
+  dplyr::mutate(pop = Population / 1e6)
+```
+
+```{r}
+ets_aan <- us_eco %>%
+  fabletools::model(aan = fable::ETS(pop))
+```
+
+```{r}
+fabletools::report(ets_aan)
+```
+
+```{r}
+components(ets_aan)
+```
+
+```{r}
+components(ets_aan) %>% autoplot()
+```
+
+```{r}
+ets_aan %>%
+  forecast(h = 20) %>%
+  autoplot()
+```
+
+
+```{r}
+aan <- us_eco %>%
+  fabletools::model(
+    aan = fable::ETS(pop ~ error("A") + trend("A") + season("N"))
+  )
+```
+
+```{r}
+ets_auto <- us_eco %>% 
+  model(
+    ets=ETS(pop)
+  )
+
+ets_ann %>% report
+
+ets_auto %>% 
+  forecast(h=30) %>% 
+  autoplot()
+```
+
+
+```{r}
+ets_auto <- us_eco %>% 
+  model(
+    ets=ETS(box_cox(pop, lambda))
+  )
+```
+
